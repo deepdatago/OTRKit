@@ -42,6 +42,7 @@
 #import "proto.h"
 #import "OTRDataHandler.h"
 #import "OTRErrorUtility.h"
+#import <OTRKit/OTRKit-Swift.h>
 
 static NSString * const kOTRKitPrivateKeyFileName = @"otr.private_key";
 static NSString * const kOTRKitFingerprintsFileName = @"otr.fingerprints";
@@ -811,8 +812,16 @@ static OtrlMessageAppOps ui_ops = {
         OtrlTLV *otr_tlvs = NULL;
         ignore_message = otrl_message_receiving(_userState, &ui_ops, (__bridge void*)opdata, [accountName UTF8String], [protocol UTF8String], [username UTF8String], [message UTF8String], &newmessage, &otr_tlvs, &context, NULL, NULL);
         
-        
-        
+        // [CRYPTO_TALK]
+        NSString *decryptedStr = nil;
+        if (newmessage != nil) {
+            NSString *testKey = @"63A78349DF7544768E0ECBCF3ACB6527";
+            NSString *base64EncodedStr = [NSString stringWithUTF8String:newmessage];
+            NSLog(@" encrypted str : %@",base64EncodedStr);
+
+            decryptedStr = [CryptoManager decryptDataWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
+            // NSLog(@" decrypted str : %@",decryptedStr);
+        }
         
         // Handle TLVs
         NSArray *tlvs = @[];
@@ -835,7 +844,12 @@ static OtrlMessageAppOps ui_ops = {
         if(ignore_message == 0 || !wasEncrypted)
         {
             if(newmessage) {
-                decodedMessage = [NSString stringWithUTF8String:newmessage];
+                if (decryptedStr != nil) {
+                    decodedMessage = decryptedStr;
+                }
+                else {
+                    decodedMessage = [NSString stringWithUTF8String:newmessage];
+                }
                 otrl_message_free(newmessage);
             } else {
                 decodedMessage = [message copy];
