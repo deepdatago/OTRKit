@@ -14,10 +14,10 @@ Pod::Spec.new do |s|
   CMD
 
   s.ios.deployment_target = "8.0"
-  s.ios.source_files = "OTRKit/**/*.{h,m}", "OTRKitDependencies-iOS/include/**/*.h"
+  s.ios.source_files = "OTRKit/**/*.{h,m,swift}", "OTRKitDependencies-iOS/include/**/*.h"
   s.ios.vendored_libraries  = "OTRKitDependencies-iOS/lib/*.a"
-  s.ios.xcconfig = { 'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/OTRKit/OTRKitDependencies-iOS/include' }
-  s.osx.frameworks = 'Security', 'MobileCoreServices'
+  s.ios.xcconfig = { 'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/OTRKit/OTRKitDependencies-iOS/include', 'FRAMEWORK_SEARCH_PATHS' => '$(PODS_ROOT)/../Carthage/Build/iOS' }
+  s.osx.frameworks = 'Security', 'MobileCoreServices', 'RNCryptor'
 
   s.osx.deployment_target = "10.10"
   s.osx.source_files = "OTRKit/**/*.{h,m}", "OTRKitDependencies-macOS/include/**/*.h"
