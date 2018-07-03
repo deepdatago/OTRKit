@@ -819,7 +819,7 @@ static OtrlMessageAppOps ui_ops = {
             NSString *base64EncodedStr = [NSString stringWithUTF8String:newmessage];
             NSLog(@" encrypted str : %@",base64EncodedStr);
 
-            decryptedStr = [CryptoManager decryptDataWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
+            decryptedStr = [CryptoManager decryptStringWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
             // NSLog(@" decrypted str : %@",decryptedStr);
         }
         

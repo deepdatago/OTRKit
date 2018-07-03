@@ -9,7 +9,7 @@ import Foundation
 import RNCryptor
 
 @objc public class CryptoManager: NSObject {
-    @objc public static func decryptDataWithSymmetricKey(key:NSString, base64Input:NSString) -> NSString! {
+    @objc public static func decryptStringWithSymmetricKey(key:NSString, base64Input:NSString) -> NSString! {
         let inputStr = base64Input as String
         NSLog("encrypted string: \((inputStr))")
         let inputData = Data(base64Encoded: inputStr)!
@@ -19,10 +19,21 @@ import RNCryptor
         return String(data: decryptedData, encoding: String.Encoding.utf8)! as NSString
     }
     
-    @objc public static func encryptDataWithSymmetricKey(key:NSString, input:NSString) -> NSString! {
+    @objc public static func encryptStringWithSymmetricKey(key:NSString, input:NSString) -> NSString! {
         let inputData = (input as String).data(using: .utf8)!
         let keyData = (key as String).data(using: .utf8)!
         return aesCBCEncrypt(data:inputData, keyData:keyData)!.base64EncodedString() as NSString
+    }
+
+    @objc public static func decryptDataWithSymmetricKey(key:NSString, inputData:Data) -> Data! {
+        let keyData = (key as String).data(using: .utf8)!
+        
+        return aesCBCDecrypt(data:inputData, keyData:keyData)!
+    }
+    
+    @objc public static func encryptDataWithSymmetricKey(key:NSString, inputData:Data) -> Data! {
+        let keyData = (key as String).data(using: .utf8)!
+        return aesCBCEncrypt(data:inputData, keyData:keyData)!
     }
 
     private static func aesCBCDecrypt(data:Data, keyData:Data) -> Data? {
