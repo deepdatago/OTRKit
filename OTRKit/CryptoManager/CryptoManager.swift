@@ -7,6 +7,13 @@
 
 import Foundation
 import RNCryptor
+// import Security
+
+let _typePublic = 0;
+let _typePrivate = 1;
+let publicKeyTag = "com.deepdatago.publicKeyTag";
+let privateKeyTag = "com.deepdatago.privateKeyTag";
+
 
 @objc public class CryptoManager: NSObject {
     @objc public static func decryptStringWithSymmetricKey(key:NSString, base64Input:NSString) -> NSString! {
@@ -121,4 +128,117 @@ import RNCryptor
         
         return cryptData;
     }
+
+    @objc public static func getKeyByKeyTag(keyTagName:NSString, keyType:Int) -> NSString {
+        // let keyValue = RSAUtils.getRSAKeyFromKeychain(keyTagName as String);
+        
+        // keyValue.
+        var dataPtr:CFTypeRef?
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassKey,
+            kSecAttrApplicationTag as String: keyTagName,
+            kSecReturnData as String: true
+        ]
+        
+        let qResult = SecItemCopyMatching(query as CFDictionary, &dataPtr)
+        if (dataPtr == nil) {
+            return "";
+        }
+        
+        // error handling with `qResult` ...
+ 
+        let data = dataPtr as! Data
+        let base64PublicKey = data.base64EncodedString()
+        // print(base64PublicKey)
+        if (base64PublicKey == nil) {
+            return ""
+        }
+        return CryptoManager.formatKeyPEM(key: base64PublicKey, keyType: keyType) as! NSString;
+    }
+    
+    private static func formatKeyPEM(key:String, keyType: Int) -> String! {
+        if (keyType == _typePublic)
+        {
+            var finalPubKeyStr = "-----BEGIN RSA PUBLIC KEY-----\n"
+            finalPubKeyStr = finalPubKeyStr + key
+            finalPubKeyStr = finalPubKeyStr + "\n-----END RSA PUBLIC KEY-----"
+            return finalPubKeyStr;
+        }
+        else {
+            var finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
+            finalPrivateKeyStr = finalPrivateKeyStr + key
+            finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
+            return finalPrivateKeyStr;
+        }
+    }
+
+    @objc public static func getPublicKeyString() -> NSString {
+        return CryptoManager.getKeyByKeyTag(keyTagName: publicKeyTag as NSString, keyType: _typePublic)
+    }
+
+    @objc public static func generateKeyPairTags() -> Bool {
+        if (getKeyByKeyTag(keyTagName: publicKeyTag as NSString, keyType:_typePublic).length > 0)
+        {
+            return true;
+        }
+        var statusCode: OSStatus?
+        var publicKey: SecKey?
+        var privateKey: SecKey?
+        let publicKeyAttr: [NSObject: NSObject] = [
+            kSecAttrIsPermanent:true as NSObject,
+            kSecAttrApplicationTag:(publicKeyTag as String).data(using: String.Encoding.utf8)! as NSObject,
+            kSecClass: kSecClassKey, // added this value
+            kSecReturnData: kCFBooleanTrue] // added this value
+        let privateKeyAttr: [NSObject: NSObject] = [
+            kSecAttrIsPermanent:true as NSObject,
+            kSecAttrApplicationTag:(publicKeyTag as String).data(using: String.Encoding.utf8)! as NSObject,
+            kSecClass: kSecClassKey, // added this value
+            kSecReturnData: kCFBooleanTrue] // added this value
+        
+        var keyPairAttr = [NSObject: NSObject]()
+        keyPairAttr[kSecAttrKeyType] = kSecAttrKeyTypeRSA
+        keyPairAttr[kSecAttrKeySizeInBits] = 2048 as NSObject
+        keyPairAttr[kSecPublicKeyAttrs] = publicKeyAttr as NSObject
+        keyPairAttr[kSecPrivateKeyAttrs] = privateKeyAttr as NSObject
+        
+        statusCode = SecKeyGeneratePair(keyPairAttr as CFDictionary, &publicKey, &privateKey)
+        var finalPubKeyStr: String!
+        var finalPrivateKeyStr: String!
+        
+        if statusCode == noErr && publicKey != nil && privateKey != nil {
+            print("Key pair generated OK")
+            var resultPublicKey: AnyObject?
+            var resultPrivateKey: AnyObject?
+            let statusPublicKey = SecItemCopyMatching(publicKeyAttr as CFDictionary, &resultPublicKey)
+            let statusPrivateKey = SecItemCopyMatching(privateKeyAttr as CFDictionary, &resultPrivateKey)
+            
+            if statusPublicKey == noErr {
+                if let publicKey = resultPublicKey as? Data {
+                    finalPubKeyStr = CryptoManager.formatKeyPEM(key:publicKey.base64EncodedString(), keyType:_typePublic)
+                    print("Public Key: \((finalPubKeyStr))")
+                }
+            }
+            
+            if statusPrivateKey == noErr {
+                if let privateKey = resultPrivateKey as? Data {
+                    // print("Private Key: \((privateKey.base64EncodedString()))")
+                    finalPrivateKeyStr = CryptoManager.formatKeyPEM(key:privateKey.base64EncodedString(), keyType:_typePrivate)
+                    /*
+                    finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
+                    finalPrivateKeyStr = finalPrivateKeyStr + privateKey.base64EncodedString()
+                    finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
+                    */
+                    print("Private Key: \((finalPrivateKeyStr))")
+                }
+            }
+        } else {
+            print("Error generating key pair: \(String(describing: statusCode))")
+            return false;
+        }
+        try! RSAUtils.addRSAPublicKey(finalPubKeyStr, tagName: publicKeyTag as String)
+        try! RSAUtils.addRSAPrivateKey(finalPrivateKeyStr, tagName: privateKeyTag as String)
+
+        return true;
+    }
+
 }
