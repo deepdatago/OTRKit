@@ -16,15 +16,15 @@ import Geth
         keyStore = GethNewKeyStore(datadir + keyStorePath, GethLightScryptN, GethLightScryptP);
     }
     
-    @objc public func getRegisterRequest(password:NSString) -> NSString! {
-        if (password == nil) {
+    @objc public func getRegisterRequest(password:NSString, nickName:NSString) -> NSString! {
+        if (password.length == 0) {
             return nil;
         }
         
         let accounts = (keyStore.getAccounts())!
         var newAccount: GethAccount
         if (accounts.size() <= 0) {
-            newAccount = createUser(ks:keyStore, password:password as String!)
+            newAccount = createUser(ks:keyStore, password:password as String)
         }
         else {
             newAccount = try! accounts.get(0)
@@ -41,7 +41,7 @@ import Geth
             return nil;
         }
         
-        let registerRequestStr = createRegisterRequest(ks:keyStore, account:newAccount, password:password as String, publicKeyPEM:publicKeyPEM as String)!
+        let registerRequestStr = createRegisterRequest(ks:keyStore, account:newAccount, password:password as String, nickName:nickName as String, publicKeyPEM:publicKeyPEM as String)!
         // print("register request: \((registerRequestStr))")
 
 
@@ -65,7 +65,7 @@ import Geth
         return signedTrans
     }
 
-    private func createRegisterRequest(ks: GethKeyStore, account: GethAccount, password: String, publicKeyPEM: String!) -> String! {
+    private func createRegisterRequest(ks: GethKeyStore, account: GethAccount, password: String, nickName: String, publicKeyPEM: String!) -> String! {
         // let myString = publicKeyPEM as NSString
         // let myNSData = myString.data(using: String.Encoding.utf8.rawValue)! as NSData
         
@@ -76,8 +76,7 @@ import Geth
         request.setValue(account.getAddress().getHex(), forKey:"sender_address")
         
         let aesKey = "5978A3C7E8BC4F8CB2D6080C18A5F689"
-        let senderName = "Name"
-        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey as NSString, input: senderName as NSString), forKey:"name")
+        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey as NSString, input: nickName as NSString), forKey:"name")
         
         
         let jsonData = try! JSONSerialization.data(withJSONObject: request, options: JSONSerialization.WritingOptions()) as NSData
