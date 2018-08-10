@@ -7,6 +7,7 @@
 
 import Foundation
 import Geth
+import SAMKeychain
 
 @objc public class DeepDatagoManager: NSObject {
     public var keyStore:GethKeyStore;
@@ -66,8 +67,6 @@ import Geth
     }
 
     private func createRegisterRequest(ks: GethKeyStore, account: GethAccount, password: String, nickName: String, publicKeyPEM: String!) -> String! {
-        // let myString = publicKeyPEM as NSString
-        // let myNSData = myString.data(using: String.Encoding.utf8.rawValue)! as NSData
         
         let data = publicKeyPEM.data(using: .utf8)!
         let transactionStr = signTransaction(ks: ks, account: account, password: password, data: data)
@@ -75,8 +74,20 @@ import Geth
         request.setValue(transactionStr, forKey:"transaction")
         request.setValue(account.getAddress().getHex(), forKey:"sender_address")
         
-        let aesKey = "5978A3C7E8BC4F8CB2D6080C18A5F689"
-        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey as NSString, input: nickName as NSString), forKey:"name")
+        let keychainService = "com.deepdatago.AESKeyService"
+        let keychainAccount = "account.SymmetricKeyForAllFriends"
+        var aesKey = SAMKeychain.password(forService:keychainService, account:keychainAccount);
+        if (aesKey == nil) {
+            aesKey = UUID().uuidString.replacingOccurrences(of: "-", with: "");
+            print("account_sharedKey: \((aesKey))")
+
+            let success = SAMKeychain.setPassword(aesKey!, forService: keychainService, account: keychainAccount);
+            if (!success) {
+                return nil;
+            }
+        }
+        
+        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey! as NSString, input: nickName as NSString), forKey:"name")
         
         
         let jsonData = try! JSONSerialization.data(withJSONObject: request, options: JSONSerialization.WritingOptions()) as NSData
