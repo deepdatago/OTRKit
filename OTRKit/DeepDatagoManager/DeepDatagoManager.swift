@@ -8,6 +8,17 @@
 import Foundation
 import Geth
 import SAMKeychain
+import AFNetworking
+
+let _keychainService = "com.deepdatago.AESKeyService"
+let _keychainAccountForAllFriends = "account.SymmetricKeyForAllFriends"
+let BASEURL = "https://dev.deepdatago.com/service/" // accounts/get_public_key/<account_id>/
+let DUMMY_ACCOUNT = "0x0000000000000000000000000000000000000000"
+
+let TAG_FRIEND_REQUEST_SYMMETRIC_KEY = "friend_request_symmetric_key"
+let TAG_ALL_FRIENDS_SYMMETRIC_KEY = "all_friends_symmetric_key"
+let TAG_TRANSACTION = "transaction"
+let TAG_SENDER_ADDRESS = "sender_address"
 
 @objc public class DeepDatagoManager: NSObject {
     public var keyStore:GethKeyStore;
@@ -41,47 +52,82 @@ import SAMKeychain
         else {
             return nil;
         }
-        
-        let registerRequestStr = createRegisterRequest(ks:keyStore, account:newAccount, password:password as String, nickName:nickName as String, publicKeyPEM:publicKeyPEM as String)!
+        try! keyStore.unlock(newAccount, passphrase: password as String)
+
+        let registerRequestStr = createRegisterRequest(ks:keyStore, account:newAccount, nickName:nickName as String, publicKeyPEM:publicKeyPEM as String)!
         // print("register request: \((registerRequestStr))")
 
 
         return registerRequestStr as NSString;
     }
 
-    private func signTransaction(ks: GethKeyStore, account:GethAccount, password: String, data: Data) -> String {
+    private func getPublicKeyRequest(account:String) -> String! {
+        let url = URL(string: BASEURL + "accounts/get_public_key/" + account + "/")
+        var request = URLRequest(url: url!)
+        request.httpMethod = "GET"
+        var responseString = ""
+        do {
+            let response: AutoreleasingUnsafeMutablePointer<URLResponse?>? = nil
+            let data = try NSURLConnection.sendSynchronousRequest(request, returning:response)
+            responseString = String(data: data, encoding: String.Encoding.utf8)!
+            let jsonData = responseString.data(using: .utf8)!
+            let jsonArray = try JSONSerialization.jsonObject(with: jsonData, options : .allowFragments) as? Dictionary<String,Any>
+            let publicKeyStr = (jsonArray!["publicKey"])!
+            return publicKeyStr as! String;
+            // let newResponse = (response?.pointee)!
+            // let responseData = String(data: (response?.pointee)!, encoding: NSUTF8StringEncoding)
+        } catch let error as NSError{
+            print (error.localizedDescription)
+            return "";
+        }
+        return responseString;
+    }
+
+    @objc public func getAddFriendRequest(account:NSString) -> NSString! {
+        let publicKey = getPublicKeyRequest(account:(account as String))
+        
+        var aesKeyForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends);
+        let aesKeyForFriend = UUID().uuidString.replacingOccurrences(of: "-", with: "");
+        
+        let encryptedKeyForAllFriends = CryptoManager.encryptStrWithPublicKey(publicKey: (publicKey! as NSString), input: (aesKeyForAllFriends! as NSString) )
+        let encryptedKeyForFriend = CryptoManager.encryptStrWithPublicKey(publicKey: (publicKey! as NSString), input: (aesKeyForFriend as NSString) )
+
+        var requestData: NSMutableDictionary = NSMutableDictionary()
+        requestData.setValue(encryptedKeyForFriend, forKey:TAG_FRIEND_REQUEST_SYMMETRIC_KEY)
+        requestData.setValue(encryptedKeyForAllFriends, forKey:TAG_ALL_FRIENDS_SYMMETRIC_KEY)
+
+        return nil;
+    }
+    
+    private func signTransaction(ks: GethKeyStore, account:GethAccount, data: Data) -> String {
         var error: NSError?
-        let to    = GethNewAddressFromHex("0x0000000000000000000000000000000000000000", &error)
-        // GethTransaction* GethNewTransaction(int64_t nonce, GethAddress* to, GethBigInt* amount, int64_t gasLimit, GethBigInt* gasPrice, NSData* data);
+        let to    = GethNewAddressFromHex(DUMMY_ACCOUNT, &error)
         var gasLimit: Int64
         gasLimit = 0
-        // let data = "abc".data(using: .utf8)
         let tx    = GethNewTransaction(1, to, GethNewBigInt(0), gasLimit, GethNewBigInt(0), data) // Random empty transaction
         let chain = GethNewBigInt(1) // Chain identifier of the main net
         
         // Sign a transaction with multiple manually cancelled authorizations
-        try! ks.unlock(account, passphrase: password)
+        // try! ks.unlock(account, passphrase: password)
         let signed = try! ks.signTx(account, tx: tx, chainID: chain)
         let signedTrans = try! signed.encodeJSON()
         return signedTrans
     }
 
-    private func createRegisterRequest(ks: GethKeyStore, account: GethAccount, password: String, nickName: String, publicKeyPEM: String!) -> String! {
+    private func createRegisterRequest(ks: GethKeyStore, account: GethAccount, nickName: String, publicKeyPEM: String!) -> String! {
         
         let data = publicKeyPEM.data(using: .utf8)!
-        let transactionStr = signTransaction(ks: ks, account: account, password: password, data: data)
+        let transactionStr = signTransaction(ks: ks, account: account, data: data)
         var request: NSMutableDictionary = NSMutableDictionary()
-        request.setValue(transactionStr, forKey:"transaction")
-        request.setValue(account.getAddress().getHex(), forKey:"sender_address")
+        request.setValue(transactionStr, forKey:TAG_TRANSACTION)
+        request.setValue(account.getAddress().getHex(), forKey:TAG_SENDER_ADDRESS)
         
-        let keychainService = "com.deepdatago.AESKeyService"
-        let keychainAccount = "account.SymmetricKeyForAllFriends"
-        var aesKey = SAMKeychain.password(forService:keychainService, account:keychainAccount);
+        var aesKey = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends);
         if (aesKey == nil) {
             aesKey = UUID().uuidString.replacingOccurrences(of: "-", with: "");
-            print("account_sharedKey: \((aesKey))")
+            // print("account_sharedKey: \((aesKey))")
 
-            let success = SAMKeychain.setPassword(aesKey!, forService: keychainService, account: keychainAccount);
+            let success = SAMKeychain.setPassword(aesKey!, forService:_keychainService, account: _keychainAccountForAllFriends);
             if (!success) {
                 return nil;
             }

@@ -7,7 +7,7 @@
 
 import Foundation
 import RNCryptor
-// import Security
+import Security
 
 let _typePublic = 0;
 let _typePrivate = 1;
@@ -240,5 +240,30 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
 
         return true;
     }
+    
+    @objc public static func encryptStrWithPublicKey(publicKey:NSString, input:NSString) -> NSString! {
+        if (input.length > 380)
+        {
+            // public key can only encrypt to certain length of string, less than 512 characters?
+            return "";
+        }
+        let publicKeyTag = "publicKey_" + MD5HashToBase64(string:(publicKey as String))
+        try! RSAUtils.addRSAPublicKey((publicKey as String), tagName: publicKeyTag)
+        let publicKeyEncryptedData = RSAUtils.encryptWithRSAKey(str: (input as String), tagName: publicKeyTag)
+        return ((publicKeyEncryptedData?.base64EncodedString())! as NSString)
+    }
+    
+    private static func MD5HashToBase64(string: String) -> String! {
+        let messageData = string.data(using:.utf8)!
+        var digestData = Data(count: Int(CC_MD5_DIGEST_LENGTH))
+        
+        _ = digestData.withUnsafeMutableBytes {digestBytes in
+            messageData.withUnsafeBytes {messageBytes in
+                CC_MD5(messageBytes, CC_LONG(messageData.count), digestBytes)
+            }
+        }
+        return digestData.base64EncodedString()
+    }
+
 
 }
