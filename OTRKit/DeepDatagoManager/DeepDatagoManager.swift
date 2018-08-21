@@ -12,6 +12,7 @@ import AFNetworking
 
 let _keychainService = "com.deepdatago.AESKeyService"
 let _keychainAccountForAllFriends = "account.SymmetricKeyForAllFriends"
+let _keychainFriendPrefix = "account.FriendSymmetricKey_"
 let BASEURL = "https://dev.deepdatago.com/service/" // accounts/get_public_key/<account_id>/
 let DUMMY_ACCOUNT = "0x0000000000000000000000000000000000000000"
 
@@ -97,7 +98,6 @@ let TAG_SENDER_ADDRESS = "sender_address"
         request.httpBody = inputData
         request.setValue("application/json", forHTTPHeaderField: "ContentType")
         do {
-            let response: AutoreleasingUnsafeMutablePointer<URLResponse?>? = nil
             var response2: URLResponse?
             let data = try NSURLConnection.sendSynchronousRequest(request, returning:&response2)
             if ((response2! as! HTTPURLResponse).statusCode != 200) {
@@ -115,7 +115,6 @@ let TAG_SENDER_ADDRESS = "sender_address"
         var request = URLRequest(url: url!)
         request.httpMethod = "GET"
         do {
-            let response: AutoreleasingUnsafeMutablePointer<URLResponse?>? = nil
             var response2: URLResponse?
             let data = try NSURLConnection.sendSynchronousRequest(request, returning:&response2)
             if ((response2! as! HTTPURLResponse).statusCode != 200) {
@@ -132,9 +131,9 @@ let TAG_SENDER_ADDRESS = "sender_address"
     @objc public func getAddFriendRequest(account:NSString) -> NSString! {
         let publicKey = getPublicKeyRequest(account:(account as String))
         
-        var aesKeyForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends);
+        let aesKeyForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends);
         let aesKeyForFriend = UUID().uuidString.replacingOccurrences(of: "-", with: "");
-        
+
         let encryptedKeyForAllFriends = CryptoManager.encryptStrWithPublicKey(publicKey: (publicKey! as NSString), input: (aesKeyForAllFriends! as NSString) )
         let encryptedKeyForFriend = CryptoManager.encryptStrWithPublicKey(publicKey: (publicKey! as NSString), input: (aesKeyForFriend as NSString) )
 
@@ -159,6 +158,14 @@ let TAG_SENDER_ADDRESS = "sender_address"
         if (data == nil) {
             return ""
         }
+
+        let keyChainFriendAccount = _keychainFriendPrefix + (account as String)
+        let success = SAMKeychain.setPassword(aesKeyForFriend, forService:_keychainService, account: keyChainFriendAccount);
+        
+        if (!success) {
+            return "";
+        }
+
         let responseString = String(data: data!, encoding: String.Encoding.utf8)!
 
         return "";
