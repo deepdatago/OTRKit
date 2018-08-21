@@ -13,6 +13,8 @@ import AFNetworking
 let _keychainService = "com.deepdatago.AESKeyService"
 let _keychainAccountForAllFriends = "account.SymmetricKeyForAllFriends"
 let _keychainFriendPrefix = "account.FriendSymmetricKey_"
+let _keychainGethAccountPassword = "account.GethPassword"
+
 let BASEURL = "https://dev.deepdatago.com/service/" // accounts/get_public_key/<account_id>/
 let DUMMY_ACCOUNT = "0x0000000000000000000000000000000000000000"
 
@@ -29,6 +31,11 @@ let TAG_SENDER_ADDRESS = "sender_address"
         keyStore = GethNewKeyStore(datadir + keyStorePath, GethLightScryptN, GethLightScryptP);
     }
     
+    @objc public func getPasswordForAllFriends() -> NSString! {
+        let passwordForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends)!;
+        return passwordForAllFriends as NSString;
+    }
+
     @objc public func getRegisterRequest(password:NSString, nickName:NSString) -> NSString! {
         if (password.length == 0) {
             return nil;
@@ -51,7 +58,14 @@ let TAG_SENDER_ADDRESS = "sender_address"
         else {
             return nil;
         }
-        try! keyStore.unlock(newAccount, passphrase: password as String)
+        // try! keyStore.unlock(newAccount, passphrase: password as String)
+        // [CRYPTO_TALK] TODO - can we just unlock account once without saving account password for
+        // future transaction signing?
+        let success = SAMKeychain.setPassword(password as String, forService:_keychainService, account: _keychainGethAccountPassword);
+        
+        if (!success) {
+            return "";
+        }
 
         let registerRequestStr = createRegisterRequest(ks:keyStore, account:newAccount!, nickName:nickName as String, publicKeyPEM:publicKeyPEM as String)!
         // print("register request: \((registerRequestStr))")
@@ -180,8 +194,9 @@ let TAG_SENDER_ADDRESS = "sender_address"
         let chain = GethNewBigInt(1) // Chain identifier of the main net
         
         // Sign a transaction with multiple manually cancelled authorizations
-        // try! ks.unlock(account, passphrase: password)
-        try! ks.unlock(account, passphrase: "abc")
+        let accountPassword = SAMKeychain.password(forService:_keychainService, account:_keychainGethAccountPassword);
+        try! ks.unlock(account, passphrase: accountPassword)
+        
         let signed = try! ks.signTx(account, tx: tx, chainID: chain)
         let signedTrans = try! signed.encodeJSON()
         return signedTrans
@@ -206,7 +221,9 @@ let TAG_SENDER_ADDRESS = "sender_address"
             }
         }
         
-        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey! as NSString, input: nickName as NSString), forKey:"name")
+        let encryptedNickName = CryptoManager.encryptStringWithSymmetricKey(key: aesKey as! NSString, input: nickName as NSString)
+        
+        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey! as NSString, input: encryptedNickName!), forKey:"name")
         
         
         let jsonData = try! JSONSerialization.data(withJSONObject: request, options: JSONSerialization.WritingOptions()) as NSData
