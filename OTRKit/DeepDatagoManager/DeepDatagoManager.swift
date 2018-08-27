@@ -223,8 +223,9 @@ let TAG_SENDER_ADDRESS = "sender_address"
         
         let encryptedNickName = CryptoManager.encryptStringWithSymmetricKey(key: aesKey as! NSString, input: nickName as NSString)
         
-        request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey! as NSString, input: encryptedNickName!), forKey:"name")
-        
+        // request.setValue(CryptoManager.encryptStringWithSymmetricKey(key: aesKey! as NSString, input: encryptedNickName!), forKey:"name")
+        request.setValue(encryptedNickName, forKey:"name")
+
         
         let jsonData = try! JSONSerialization.data(withJSONObject: request, options: JSONSerialization.WritingOptions()) as NSData
         let jsonString = NSString(data: jsonData as Data, encoding: String.Encoding.utf8.rawValue) as! String
