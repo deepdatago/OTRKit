@@ -9,10 +9,11 @@ import Foundation
 import RNCryptor
 import Security
 
-let _typePublic = 0;
-let _typePrivate = 1;
+// let _typePublic = 0;
+// let _typePrivate = 1;
 let publicKeyTag = "com.deepdatago.publicKeyTag";
 let privateKeyTag = "com.deepdatago.privateKeyTag";
+let kPublicPrivateKeySize = 4096
 
 
 @objc public class CryptoManager: NSObject {
@@ -129,7 +130,7 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
         return cryptData;
     }
 
-    @objc public static func getKeyByKeyTag(keyTagName:NSString, keyType:Int) -> NSString {
+    @objc public static func getKeyByKeyTag(keyTagName:NSString) -> NSString {
         // let keyValue = RSAUtils.getRSAKeyFromKeychain(keyTagName as String);
         
         // keyValue.
@@ -148,15 +149,15 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
         // error handling with `qResult` ...
  
         let data = dataPtr as! Data
-        let base64PublicKey = data.base64EncodedString()
-        // print(base64PublicKey)
-        if (base64PublicKey == nil) {
+        if (data == nil) {
             return ""
         }
-        return CryptoManager.formatKeyPEM(key: base64PublicKey, keyType: keyType) as! NSString;
+        let cryptoImportExportManager = CryptoExportImportManager()
+        return cryptoImportExportManager.exportRSAPublicKeyToPEM(data, keyType: kSecAttrKeyTypeRSA as String, keySize: kPublicPrivateKeySize) as NSString
     }
     
-    private static func formatKeyPEM(key:String, keyType: Int) -> String! {
+    private static func formatPrivateKeyPEM(key:String) -> String! {
+        /*
         if (keyType == _typePublic)
         {
             var finalPubKeyStr = "-----BEGIN RSA PUBLIC KEY-----\n"
@@ -164,20 +165,19 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
             finalPubKeyStr = finalPubKeyStr + "\n-----END RSA PUBLIC KEY-----"
             return finalPubKeyStr;
         }
-        else {
-            var finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
-            finalPrivateKeyStr = finalPrivateKeyStr + key
-            finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
-            return finalPrivateKeyStr;
-        }
+        */
+        var finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
+        finalPrivateKeyStr = finalPrivateKeyStr + key
+        finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
+        return finalPrivateKeyStr;
     }
 
     @objc public static func getPublicKeyString() -> NSString {
-        return CryptoManager.getKeyByKeyTag(keyTagName: publicKeyTag as NSString, keyType: _typePublic)
+        return CryptoManager.getKeyByKeyTag(keyTagName: publicKeyTag as NSString)
     }
 
     @objc public static func generateKeyPairTags() -> Bool {
-        if (getKeyByKeyTag(keyTagName: publicKeyTag as NSString, keyType:_typePublic).length > 0)
+        if (getKeyByKeyTag(keyTagName: publicKeyTag as NSString).length > 0)
         {
             return true;
         }
@@ -197,7 +197,7 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
         
         var keyPairAttr = [NSObject: NSObject]()
         keyPairAttr[kSecAttrKeyType] = kSecAttrKeyTypeRSA
-        keyPairAttr[kSecAttrKeySizeInBits] = 2048 as NSObject
+        keyPairAttr[kSecAttrKeySizeInBits] = kPublicPrivateKeySize as NSObject
         keyPairAttr[kSecPublicKeyAttrs] = publicKeyAttr as NSObject
         keyPairAttr[kSecPrivateKeyAttrs] = privateKeyAttr as NSObject
         
@@ -214,7 +214,8 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
             
             if statusPublicKey == noErr {
                 if let publicKey = resultPublicKey as? Data {
-                    finalPubKeyStr = CryptoManager.formatKeyPEM(key:publicKey.base64EncodedString(), keyType:_typePublic)
+                    let cryptoImportExportManager = CryptoExportImportManager()
+                    finalPubKeyStr = cryptoImportExportManager.exportRSAPublicKeyToPEM(publicKey, keyType: kSecAttrKeyTypeRSA as String, keySize: kPublicPrivateKeySize)
                     print("Public Key: \((finalPubKeyStr))")
                 }
             }
@@ -222,13 +223,7 @@ let privateKeyTag = "com.deepdatago.privateKeyTag";
             if statusPrivateKey == noErr {
                 if let privateKey = resultPrivateKey as? Data {
                     // print("Private Key: \((privateKey.base64EncodedString()))")
-                    finalPrivateKeyStr = CryptoManager.formatKeyPEM(key:privateKey.base64EncodedString(), keyType:_typePrivate)
-                    /*
-                    finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
-                    finalPrivateKeyStr = finalPrivateKeyStr + privateKey.base64EncodedString()
-                    finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
-                    */
-                    print("Private Key: \((finalPrivateKeyStr))")
+                    finalPrivateKeyStr = CryptoManager.formatPrivateKeyPEM(key:privateKey.base64EncodedString())
                 }
             }
         } else {
