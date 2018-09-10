@@ -11,8 +11,8 @@ import Security
 
 // let _typePublic = 0;
 // let _typePrivate = 1;
-let publicKeyTag = "com.deepdatago.publicKeyTag";
-let privateKeyTag = "com.deepdatago.privateKeyTag";
+let PUBLIC_KEY_TAG = "com.deepdatago.publicKeyTag";
+let PRIVATE_KEY_TAG = "com.deepdatago.privateKeyTag";
 let kPublicPrivateKeySize = 4096
 
 
@@ -173,11 +173,11 @@ let kPublicPrivateKeySize = 4096
     }
 
     @objc public static func getPublicKeyString() -> NSString {
-        return CryptoManager.getKeyByKeyTag(keyTagName: publicKeyTag as NSString)
+        return CryptoManager.getKeyByKeyTag(keyTagName: PUBLIC_KEY_TAG as NSString)
     }
 
     @objc public static func generateKeyPairTags() -> Bool {
-        if (getKeyByKeyTag(keyTagName: publicKeyTag as NSString).length > 0)
+        if (getKeyByKeyTag(keyTagName: PUBLIC_KEY_TAG as NSString).length > 0)
         {
             return true;
         }
@@ -186,12 +186,12 @@ let kPublicPrivateKeySize = 4096
         var privateKey: SecKey?
         let publicKeyAttr: [NSObject: NSObject] = [
             kSecAttrIsPermanent:true as NSObject,
-            kSecAttrApplicationTag:(publicKeyTag as String).data(using: String.Encoding.utf8)! as NSObject,
+            kSecAttrApplicationTag:PUBLIC_KEY_TAG.data(using: String.Encoding.utf8)! as NSObject,
             kSecClass: kSecClassKey, // added this value
             kSecReturnData: kCFBooleanTrue] // added this value
         let privateKeyAttr: [NSObject: NSObject] = [
             kSecAttrIsPermanent:true as NSObject,
-            kSecAttrApplicationTag:(publicKeyTag as String).data(using: String.Encoding.utf8)! as NSObject,
+            kSecAttrApplicationTag:PRIVATE_KEY_TAG.data(using: String.Encoding.utf8)! as NSObject,
             kSecClass: kSecClassKey, // added this value
             kSecReturnData: kCFBooleanTrue] // added this value
         
@@ -206,7 +206,7 @@ let kPublicPrivateKeySize = 4096
         var finalPrivateKeyStr: String!
         
         if statusCode == noErr && publicKey != nil && privateKey != nil {
-            print("Key pair generated OK")
+            // print("Key pair generated OK")
             var resultPublicKey: AnyObject?
             var resultPrivateKey: AnyObject?
             let statusPublicKey = SecItemCopyMatching(publicKeyAttr as CFDictionary, &resultPublicKey)
@@ -214,9 +214,17 @@ let kPublicPrivateKeySize = 4096
             
             if statusPublicKey == noErr {
                 if let publicKey = resultPublicKey as? Data {
+                    /*
+                    finalPubKeyStr = "-----BEGIN RSA PUBLIC KEY-----\n"
+                    finalPubKeyStr = finalPubKeyStr + publicKey.base64EncodedString()
+                    
+                    // print("Public Key: \((publicKey.base64EncodedString()))")
+                    // let publicKeyStr = publicKey.base64EncodedString()
+                    finalPubKeyStr = finalPubKeyStr + "\n-----END RSA PUBLIC KEY-----"
+                    */
                     let cryptoImportExportManager = CryptoExportImportManager()
                     finalPubKeyStr = cryptoImportExportManager.exportRSAPublicKeyToPEM(publicKey, keyType: kSecAttrKeyTypeRSA as String, keySize: kPublicPrivateKeySize)
-                    print("Public Key: \((finalPubKeyStr))")
+                    // print("Public Key: \((finalPubKeyStr))")
                 }
             }
             
@@ -224,18 +232,22 @@ let kPublicPrivateKeySize = 4096
                 if let privateKey = resultPrivateKey as? Data {
                     // print("Private Key: \((privateKey.base64EncodedString()))")
                     finalPrivateKeyStr = CryptoManager.formatPrivateKeyPEM(key:privateKey.base64EncodedString())
+                    /*
+                    finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
+                    finalPrivateKeyStr = finalPrivateKeyStr + privateKey.base64EncodedString()
+                    finalPrivateKeyStr = finalPrivateKeyStr + "\n-----END RSA PRIVATE KEY-----"
+                    */
                 }
             }
         } else {
             print("Error generating key pair: \(String(describing: statusCode))")
             return false;
         }
-        try! RSAUtils.addRSAPublicKey(finalPubKeyStr, tagName: publicKeyTag as String)
-        try! RSAUtils.addRSAPrivateKey(finalPrivateKeyStr, tagName: privateKeyTag as String)
-
+        try! RSAUtils.addRSAPublicKey(finalPubKeyStr, tagName:PUBLIC_KEY_TAG)
+        try! RSAUtils.addRSAPrivateKey(finalPrivateKeyStr, tagName:PRIVATE_KEY_TAG)
         return true;
     }
-    
+
     @objc public static func encryptStrWithPublicKey(publicKey:NSString, input:NSString) -> NSString! {
         if (input.length > 380)
         {
@@ -247,7 +259,36 @@ let kPublicPrivateKeySize = 4096
         let publicKeyEncryptedData = RSAUtils.encryptWithRSAKey(str: (input as String), tagName: publicKeyTag)
         return ((publicKeyEncryptedData?.base64EncodedString())! as NSString)
     }
-    
+
+    @objc public static func encryptStrWithPublicKeyTag(keyTag:NSString, input:NSString) -> NSString! {
+        if (input.length > 380)
+        {
+            // public key can only encrypt to certain length of string, less than 512 characters?
+            return "";
+        }
+        var publicKeyTag = keyTag as String
+        if publicKeyTag.count == 0 {
+            publicKeyTag = PUBLIC_KEY_TAG
+        }
+        
+        let publicKeyEncryptedData = RSAUtils.encryptWithRSAKey(str: (input as String), tagName: publicKeyTag)
+        return ((publicKeyEncryptedData?.base64EncodedString())! as NSString)
+    }
+
+    @objc public static func decryptStrWithPrivateKeyTag(keyTag:NSString, inputBase64Encoded:NSString) -> NSString! {
+        var keyTagToUse = keyTag as String
+        if keyTagToUse.count == 0 {
+            keyTagToUse = PRIVATE_KEY_TAG
+        }
+        let decodedData = Data(base64Encoded: (inputBase64Encoded) as String)
+        let decryptedData = RSAUtils.decryptWithRSAKey(encryptedData: decodedData!, tagName: keyTagToUse)
+        if (decryptedData == nil) {
+            return ""
+        }
+        var backToString = String(data: decryptedData!, encoding: String.Encoding.utf8) as String!
+        return backToString! as NSString
+    }
+
     private static func MD5HashToBase64(string: String) -> String! {
         let messageData = string.data(using:.utf8)!
         var digestData = Data(count: Int(CC_MD5_DIGEST_LENGTH))
