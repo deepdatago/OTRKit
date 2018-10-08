@@ -16,6 +16,10 @@ let _keychainFriendPrefix = "account.FriendSymmetricKey_"
 let _keychainGethAccountPassword = "account.GethPassword"
 
 let BASEURL = "https://dev.deepdatago.com/service/" // accounts/get_public_key/<account_id>/
+let ACCOUNT_GET_PUBLIC_KEY_API = "accounts/get_public_key/"
+let REQUEST_FRIEND_API = "request/friend/"
+let REQUEST_SUMMARY_API = "request/summary/?"
+
 let DUMMY_ACCOUNT = "0x0000000000000000000000000000000000000000"
 
 let TAG_FRIEND_REQUEST_SYMMETRIC_KEY = "friend_request_symmetric_key"
@@ -87,7 +91,7 @@ let TAG_SENDER_ADDRESS = "sender_address"
     }
     
     private func getPublicKeyRequest(account:String) -> String! {
-        let data = sendGETRequest(urlString:(BASEURL + "accounts/get_public_key/" + account + "/"))
+        let data = sendGETRequest(urlString:(BASEURL + ACCOUNT_GET_PUBLIC_KEY_API + account + "/"))
         if (data == nil) {
             return ""
         }
@@ -168,7 +172,7 @@ let TAG_SENDER_ADDRESS = "sender_address"
         let friendRequestData = try! JSONSerialization.data(withJSONObject: friendRequest, options: JSONSerialization.WritingOptions()) as NSData
         let friendRequestDataString = NSString(data: friendRequestData as Data, encoding: String.Encoding.utf8.rawValue) as! String
         
-        let data = sendPOSTRequest(urlString:(BASEURL + "request/friend/"), input: friendRequestDataString);
+        let data = sendPOSTRequest(urlString:(BASEURL + REQUEST_FRIEND_API), input: friendRequestDataString);
         if (data == nil) {
             return ""
         }
@@ -235,6 +239,19 @@ let TAG_SENDER_ADDRESS = "sender_address"
     private func createUser(ks: GethKeyStore, password: String) -> GethAccount {
         let newAccount = try! ks.newAccount(password)
         return newAccount
+    }
+
+    @objc public func getSummary(toAddress: NSString) -> NSString! {
+        // request/summary/?param1=value1&param2=value2
+        // to_address = 0x...
+        // b64encoded_signature = ...
+        // time_stamp=unix time
+        let timeInterval = NSDate().timeIntervalSince1970
+        let timeStr = String(format: "%.0f", timeInterval)
+        let sign = CryptoManager.signStrWithPrivateKey(input: (timeStr as NSString), urlEncode: true)
+        // print(sign!);
+
+        return "";
     }
 
 }

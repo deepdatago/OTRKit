@@ -301,5 +301,72 @@ let kPublicPrivateKeySize = 4096
         return digestData.base64EncodedString()
     }
 
+    private static func getPrivateKeyRef() -> SecKey? {
+        var keyRef: AnyObject?
+        let query: Dictionary<String, AnyObject> = [
+            String(kSecAttrKeyType): kSecAttrKeyTypeRSA,
+            String(kSecReturnRef): kCFBooleanTrue as CFBoolean,
+            String(kSecClass): kSecClassKey as CFString,
+            String(kSecAttrApplicationTag): PRIVATE_KEY_TAG as CFString,
+            ]
+        
+        let status = SecItemCopyMatching(query as CFDictionary, &keyRef)
+        var key : SecKey?
+        
+        switch status {
+        case noErr:
+            if let ref = keyRef {
+                // key = (ref as! SecKey)
+                return (ref as! SecKey)
+            }
+        default:
+            break
+        }
+        return key
+    }
+    
+    private static func signString(input: String, privateKeyTag: String, urlEncode: Bool) -> String {
+        let inputData = (input as String).data(using: String.Encoding.utf8)!
 
+        let key = getPrivateKeyRef()
+        if (key == nil) {
+            return ""
+        }
+
+        let hash = NSMutableData(length: Int(CC_SHA256_DIGEST_LENGTH))!
+        // Create SHA256 hash of the message
+        CC_SHA256((inputData as NSData).bytes, CC_LONG(inputData.count), hash.mutableBytes.assumingMemoryBound(to: UInt8.self))
+        
+        // Sign the hash with the private key
+        let blockSize = SecKeyGetBlockSize(key!)
+        
+        let hashDataLength = Int(hash.length)
+        let hashData = hash.bytes.bindMemory(to: UInt8.self, capacity: hash.length)
+        
+        if let result = NSMutableData(length: Int(blockSize)) {
+            let encryptedData = result.mutableBytes.assumingMemoryBound(to: UInt8.self)
+            var encryptedDataLength = blockSize
+            
+            let status = SecKeyRawSign(key!, .PKCS1SHA256, hashData, hashDataLength, encryptedData, &encryptedDataLength)
+            
+            if status == noErr {
+                // Create Base64 string of the result
+                result.length = encryptedDataLength
+                let signature = result.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
+
+                if (urlEncode) {
+                    return signature.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+                }
+                
+                return signature
+            }
+        }
+        
+        return ""
+    }
+
+    @objc public static func signStrWithPrivateKey(input: NSString, urlEncode: Bool = false) -> NSString!
+    {
+        return signString(input: input as String, privateKeyTag: PRIVATE_KEY_TAG, urlEncode: urlEncode) as NSString
+    }
 }
