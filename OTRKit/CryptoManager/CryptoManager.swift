@@ -222,8 +222,8 @@ let kPublicPrivateKeySize = 4096
                     // let publicKeyStr = publicKey.base64EncodedString()
                     finalPubKeyStr = finalPubKeyStr + "\n-----END RSA PUBLIC KEY-----"
                     */
-                    let cryptoImportExportManager = CryptoExportImportManager()
-                    finalPubKeyStr = cryptoImportExportManager.exportRSAPublicKeyToPEM(publicKey, keyType: kSecAttrKeyTypeRSA as String, keySize: kPublicPrivateKeySize)
+                    // let cryptoImportExportManager = CryptoExportImportManager()
+                    // finalPubKeyStr = cryptoImportExportManager.exportRSAPublicKeyToPEM(publicKey, keyType: kSecAttrKeyTypeRSA as String, keySize: kPublicPrivateKeySize)
                     // print("Public Key: \((finalPubKeyStr))")
                 }
             }
@@ -231,7 +231,7 @@ let kPublicPrivateKeySize = 4096
             if statusPrivateKey == noErr {
                 if let privateKey = resultPrivateKey as? Data {
                     // print("Private Key: \((privateKey.base64EncodedString()))")
-                    finalPrivateKeyStr = CryptoManager.formatPrivateKeyPEM(key:privateKey.base64EncodedString())
+                    // finalPrivateKeyStr = CryptoManager.formatPrivateKeyPEM(key:privateKey.base64EncodedString())
                     /*
                     finalPrivateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n"
                     finalPrivateKeyStr = finalPrivateKeyStr + privateKey.base64EncodedString()
@@ -243,8 +243,8 @@ let kPublicPrivateKeySize = 4096
             print("Error generating key pair: \(String(describing: statusCode))")
             return false;
         }
-        try! RSAUtils.addRSAPublicKey(finalPubKeyStr, tagName:PUBLIC_KEY_TAG)
-        try! RSAUtils.addRSAPrivateKey(finalPrivateKeyStr, tagName:PRIVATE_KEY_TAG)
+        // try! RSAUtils.addRSAPublicKey(finalPubKeyStr, tagName:PUBLIC_KEY_TAG)
+        // try! RSAUtils.addRSAPrivateKey(finalPrivateKeyStr, tagName:PRIVATE_KEY_TAG)
         return true;
     }
 
