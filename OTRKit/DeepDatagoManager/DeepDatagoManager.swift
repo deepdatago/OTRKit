@@ -28,13 +28,19 @@ let TAG_TRANSACTION = "transaction"
 let TAG_SENDER_ADDRESS = "sender_address"
 
 @objc public class DeepDatagoManager: NSObject {
+    static let shared = DeepDatagoManager()
+    
     public var keyStore:GethKeyStore;
     private let keyStorePath = "/keystore";
-    public override init() {
+    private override init() {
         let datadir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
         keyStore = GethNewKeyStore(datadir + keyStorePath, GethLightScryptN, GethLightScryptP);
     }
     
+    @objc public static func sharedInstance() -> DeepDatagoManager {
+        return DeepDatagoManager.shared
+    }
+
     @objc public func getPasswordForAllFriends() -> NSString! {
         let passwordForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends)!;
         return passwordForAllFriends as NSString;
@@ -146,7 +152,7 @@ let TAG_SENDER_ADDRESS = "sender_address"
         return nil;
     }
 
-    @objc public func getAddFriendRequest(account:NSString) -> NSString! {
+    @objc public func addFriendRequest(account:NSString) -> Void {
         let publicKey = getPublicKeyRequest(account:(account as String))
         
         let aesKeyForAllFriends = SAMKeychain.password(forService:_keychainService, account:_keychainAccountForAllFriends);
@@ -174,19 +180,19 @@ let TAG_SENDER_ADDRESS = "sender_address"
         
         let data = sendPOSTRequest(urlString:(BASEURL + REQUEST_FRIEND_API), input: friendRequestDataString);
         if (data == nil) {
-            return ""
+            return ()
         }
 
         let keyChainFriendAccount = _keychainFriendPrefix + (account as String)
         let success = SAMKeychain.setPassword(aesKeyForFriend, forService:_keychainService, account: keyChainFriendAccount);
         
         if (!success) {
-            return "";
+            return ();
         }
 
-        let responseString = String(data: data!, encoding: String.Encoding.utf8)!
+        // let responseString = String(data: data!, encoding: String.Encoding.utf8)!
 
-        return "";
+        return ();
     }
     
     private func signTransaction(ks: GethKeyStore, account:GethAccount, data: Data) -> String {
