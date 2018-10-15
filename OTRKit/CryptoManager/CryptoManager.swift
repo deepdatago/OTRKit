@@ -19,7 +19,7 @@ let kPublicPrivateKeySize = 4096
 @objc public class CryptoManager: NSObject {
     @objc public static func decryptStringWithSymmetricKey(key:NSString, base64Input:NSString) -> NSString! {
         let inputStr = base64Input as String
-        NSLog("encrypted string: \((inputStr))")
+        // NSLog("encrypted string: \((inputStr))")
         let inputData = Data(base64Encoded: inputStr)!
         let keyData = (key as String).data(using: .utf8)!
         
