@@ -20,11 +20,12 @@ let kPublicPrivateKeySize = 4096
     @objc public static func decryptStringWithSymmetricKey(key:NSString, base64Input:NSString) -> NSString! {
         let inputStr = base64Input as String
         // NSLog("encrypted string: \((inputStr))")
-        let inputData = Data(base64Encoded: inputStr)!
+        guard let inputData = Data(base64Encoded: inputStr) else {return ""}
         let keyData = (key as String).data(using: .utf8)!
         
         let decryptedData = aesCBCDecrypt(data:inputData, keyData:keyData)!
-        return String(data: decryptedData, encoding: String.Encoding.utf8)! as NSString
+        guard let returnStr = String(data: decryptedData, encoding: String.Encoding.utf8) else {return ""}
+        return returnStr as NSString
     }
     
     @objc public static func encryptStringWithSymmetricKey(key:NSString, input:NSString) -> NSString! {
