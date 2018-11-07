@@ -300,6 +300,17 @@ let TAG_REQUEST = "request"
         return "";
     }
 
+    @objc public func getAllFriendsKeyByAccount(account: NSString) -> NSString! {
+        let gethAccount = getAccount()
+        let selfAccount = gethAccount?.getAddress().getHex().replacingOccurrences(of: "0x", with: "")
+        if (selfAccount?.lowercased() == (account as String).lowercased()) {
+            return getPasswordForAllFriends()
+        }
+        
+        let aesKey = getAllFriendsKeyForAccount(account: (account as String)) as NSString
+        return aesKey
+    }
+
     private func setSymmetricKeyForAccount(account: String, aesKey: String) -> Bool {
         let keyChainFriendAccount = _keychainFriendPrefix + (account as String)
         let success = SAMKeychain.setPassword(aesKey, forService:_keychainService, account: keyChainFriendAccount);
