@@ -815,13 +815,16 @@ static OtrlMessageAppOps ui_ops = {
         // [CRYPTO_TALK]
         NSString *decryptedStr = nil;
         if (newmessage != nil) {
-            NSString *testKey = @"63A78349DF7544768E0ECBCF3ACB6527";
+            DeepDatagoManager *deepDatagoManager = [DeepDatagoManager sharedInstance];
+            NSString *tmpUserName = [username componentsSeparatedByString:@"@"][0];
+            NSString *testKey = [deepDatagoManager getSymmetricKeyForAccountWithAccount:tmpUserName];
             NSString *base64EncodedStr = [NSString stringWithUTF8String:newmessage];
-            NSLog(@" encrypted str : %@",base64EncodedStr);
+            // NSLog(@" encrypted str : %@",base64EncodedStr);
 
             decryptedStr = [CryptoManager decryptStringWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
             // NSLog(@" decrypted str : %@",decryptedStr);
         }
+        // [CRYPTO_TALK] end
         
         // Handle TLVs
         NSArray *tlvs = @[];

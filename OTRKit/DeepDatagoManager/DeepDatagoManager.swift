@@ -317,13 +317,14 @@ let TAG_REQUEST = "request"
         return success;
     }
     
-    private func getSymmetricKeyForAccount(account: String) -> String {
+    // private func getSymmetricKeyForAccount(account: String) -> String {
+    @objc public func getSymmetricKeyForAccount(account: NSString) -> NSString! {
         let keyChainFriendAccount = _keychainFriendPrefix + (account as String)
         let aesKey = SAMKeychain.password(forService:_keychainService, account:keyChainFriendAccount);
         if (aesKey == nil) {
             return "";
         }
-        return aesKey!;
+        return aesKey! as NSString;
     }
 
     private func setAllFriendsKeyForAccount(account: String, aesKey: String) -> Bool {
