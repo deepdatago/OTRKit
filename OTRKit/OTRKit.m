@@ -817,7 +817,7 @@ static OtrlMessageAppOps ui_ops = {
         if (newmessage != nil) {
             DeepDatagoManager *deepDatagoManager = [DeepDatagoManager sharedInstance];
             NSString *tmpUserName = [username componentsSeparatedByString:@"@"][0];
-            NSString *testKey = [deepDatagoManager getSymmetricKeyForAccountWithAccount:tmpUserName];
+            NSString *testKey = [deepDatagoManager getSymmetricKeyWithAccount:tmpUserName];
             NSString *base64EncodedStr = [NSString stringWithUTF8String:newmessage];
             // NSLog(@" encrypted str : %@",base64EncodedStr);
 

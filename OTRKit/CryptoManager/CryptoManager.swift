@@ -287,6 +287,9 @@ let kPublicPrivateKeySize = 4096
             return ""
         }
         var backToString = String(data: decryptedData!, encoding: String.Encoding.utf8) as String!
+        if (backToString == nil) {
+            return ""
+        }
         return backToString! as NSString
     }
 
