@@ -14,6 +14,7 @@ let _keychainService = "com.deepdatago.AESKeyService"
 let _keychainAccountForAllFriends = "account.SymmetricKeyForAllFriends"
 let _keychainFriendPrefix = "account.FriendSymmetricKey_" // for friends
 let _keychainAllFriendsKeyPrefix = "account.AllFriendsKey_" // for friends
+let _keychainDecryptedNickNamePrefix = "account.NickNameOf_" // for friend's nick name
 let _keychainGethAccountPassword = "account.GethPassword"
 
 let BASEURL = "https://dev.deepdatago.com/service/" // accounts/get_public_key/<account_id>/
@@ -381,7 +382,27 @@ let TAG_ACTION_TYPE = "action_type"
         let success = SAMKeychain.setPassword(aesKey, forService:_keychainService, account: keyChainFriendAccount);
         return success;
     }
-    
+
+    private func setDecryptedNick(account: String, nickName: String) -> Bool {
+        if (account.count == 0 || nickName.count == 0) {
+            return false
+        }
+        let accountStr = account.replacingOccurrences(of: "0x", with: "")
+        
+        let keyChainFriendAccount = _keychainDecryptedNickNamePrefix + accountStr
+        let success = SAMKeychain.setPassword(nickName, forService:_keychainService, account: keyChainFriendAccount);
+        return success;
+    }
+
+    @objc public func getDecryptedNick(account: NSString) -> NSString! {
+        let keyChainFriendAccount = _keychainDecryptedNickNamePrefix + (account as String)
+        var nickName = SAMKeychain.password(forService:_keychainService, account:keyChainFriendAccount);
+        if (nickName == nil || (nickName! as String).count == 0) {
+            return ""
+        }
+        return nickName! as NSString;
+    }
+
     private func processSummary(summary: String) -> Bool {
         let jsonData = summary.data(using: .utf8)!
         do {
@@ -409,7 +430,8 @@ let TAG_ACTION_TYPE = "action_type"
                 let allFriendsKey = requestObj![TAG_ALL_FRIENDS_SYMMETRIC_KEY] as! String
                 let decryptedAllFriendsKey = CryptoManager.decryptStrWithPrivateKeyTag(keyTag: (PRIVATE_KEY_TAG as NSString), inputBase64Encoded: allFriendsKey as NSString)!
                 _ = setAllFriendsKey(account: itemFromAddress, aesKey: decryptedAllFriendsKey as String)
-                // let decryptedName = CryptoManager.decryptStringWithSymmetricKey(key: decryptedAllFriendsKey, base64Input: itemName as NSString)
+                let decryptedName = CryptoManager.decryptStringWithSymmetricKey(key: decryptedAllFriendsKey, base64Input: itemName as NSString)
+                _ = setDecryptedNick(account: itemFromAddress, nickName: decryptedName as! String)
                 // print(decryptedName)
             }
             // return publicKeyStr as! String;
