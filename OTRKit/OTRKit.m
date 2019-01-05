@@ -42,7 +42,7 @@
 #import "proto.h"
 #import "OTRDataHandler.h"
 #import "OTRErrorUtility.h"
-#import <OTRKit/OTRKit-Swift.h>
+@import DeepDatago;
 
 static NSString * const kOTRKitPrivateKeyFileName = @"otr.private_key";
 static NSString * const kOTRKitFingerprintsFileName = @"otr.fingerprints";
