@@ -813,6 +813,7 @@ static OtrlMessageAppOps ui_ops = {
         ignore_message = otrl_message_receiving(_userState, &ui_ops, (__bridge void*)opdata, [accountName UTF8String], [protocol UTF8String], [username UTF8String], [message UTF8String], &newmessage, &otr_tlvs, &context, NULL, NULL);
         
         // [CRYPTO_TALK]
+        CryptoManager *cryptoManager = [CryptoManager sharedInstance];
         NSString *decryptedStr = nil;
         if (newmessage != nil) {
             DeepDatagoManager *deepDatagoManager = [DeepDatagoManager sharedInstance];
@@ -821,7 +822,7 @@ static OtrlMessageAppOps ui_ops = {
             NSString *base64EncodedStr = [NSString stringWithUTF8String:newmessage];
             // NSLog(@" encrypted str : %@",base64EncodedStr);
 
-            decryptedStr = [CryptoManager decryptStringWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
+            decryptedStr = [cryptoManager decryptStringWithSymmetricKeyWithKey:testKey base64Input:base64EncodedStr];
             // NSLog(@" decrypted str : %@",decryptedStr);
         }
         // [CRYPTO_TALK] end
